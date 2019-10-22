@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>icons/musical_note-black.png</file>
+        <file>icons/musical_note-white.png</file>
+        <file>icons/search-white.png</file>
+        <file>icons/library-white.png</file>
+        <file>icons/close-white.png</file>
+        <file>icons/settings.png</file>
+    </qresource>
+    <qresource prefix="/icons/volume">
+        <file>icons/volume-white-max.png</file>
+        <file>icons/volume-white-med.png</file>
+        <file>icons/volume-white-min.png</file>
+        <file>icons/volume-white-disabled.png</file>
+    </qresource>
+    <qresource prefix="/icons/playercontrols">
+        <file>icons/play.png</file>
+        <file>icons/track-next.png</file>
+        <file>icons/track-prev.png</file>
+        <file>icons/pause.png</file>
+    </qresource>
+</RCC>
