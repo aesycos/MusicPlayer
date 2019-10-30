@@ -6,6 +6,7 @@
         <file>icons/library-white.png</file>
         <file>icons/close-white.png</file>
         <file>icons/settings.png</file>
+        <file>icons/stolencover.png</file>
     </qresource>
     <qresource prefix="/icons/volume">
         <file>icons/volume-white-max.png</file>
@@ -18,5 +19,8 @@
         <file>icons/track-next.png</file>
         <file>icons/track-prev.png</file>
         <file>icons/pause.png</file>
+    </qresource>
+    <qresource prefix="/config">
+        <file>config/config.json</file>
     </qresource>
 </RCC>

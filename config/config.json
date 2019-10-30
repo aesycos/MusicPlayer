@@ -1,0 +1,19 @@
+{
+    "Library Path" : "/home/aesycos/Music/Music Library",
+    "Database" : "library.db",
+    "Watched Folders" : [
+        "/home/aesycos/Music/Downtempo/",
+        "/home/aesycos/Music/"
+    ],
+    "Default Columns" : [
+            "Track",
+            "Time",
+            "Artist",
+            "Album",
+            "Genre",
+            "Rating",
+            "Playcount",
+            "Path"
+        ],
+    "Volume" : 20
+}

@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QSqlQuery>
 #include <QSqlResult>
+#include <QSqlRecord>
 #include <QSqlError>
 #include <QFile>
 #include <QFileInfo>
@@ -17,49 +18,147 @@ DbManager::DbManager(const QString& path)
    }
    else
    {
-      QSqlQuery query;
-      query.prepare( "CREATE TABLE IF NOT EXISTS \"Track\" ( \"id\"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, \"name\"	TEXT NOT NULL, \"artist_id\"	INTEGER,	\"album_id\"	INTEGER,	\"genre_id\"	INTEGER,	\"path\"	TEXT NOT NULL,	\"time\"	TEXT NOT NULL,	\"playcount\"	INTEGER NOT NULL DEFAULT 0,	\"rating\"	INTEGER NOT NULL DEFAULT 0 CHECK(rating<=5),	FOREIGN KEY(\"artist_id\") REFERENCES \"Artists\"(\"id\") ON DELETE SET NULL)" );
-      if ( query.exec() )
-      {
+       QList<QStringList> *results = nullptr;
+       if ( ( results = query( "CREATE TABLE \"Album\" ( "
+              "\"id\"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "
+              "\"name\"	TEXT NOT NULL, "
+              "\"artist_id\"	INTEGER NOT NULL, "
+              "\"discs\"	INTEGER DEFAULT 1, "
+              "\"tracks\"	INTEGER, "
+              "FOREIGN KEY(\"artist_id\") REFERENCES \"Artist\" "
+              ")") ) == nullptr )
+       {
+           qDebug() << "Failed to create Album Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
 
-      }
-      else
-      {
-        qDebug() << "Error creating Track Table!";
-      }
-      query.prepare( "CREATE TABLE IF NOT EXISTS \"Albums\" ( \"id\"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, \"name\"	TEXT NOT NULL, \"artist_id\"	INTEGER NOT NULL, FOREIGN KEY(\"artist_id\") REFERENCES \"Artists\" )" );
-      if ( query.exec() )
-      {
+       if ( ( results = query( "CREATE TABLE \"Artist\" ( \"id\" "
+              "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "
+              "\"name\"	TEXT NOT NULL )") ) == nullptr )
+       {
+           qDebug() << "Failed to create Artist Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
 
-      }
-      else
-      {
-        qDebug() << "Error creating Album Table!";
-      }
-      query.prepare( "CREATE TABLE IF NOT EXISTS \"Artists\" ( \"id\"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,	\"name\"	TEXT NOT NULL )" );
-      if ( query.exec() )
-      {
+       if ( ( results = query( "CREATE TABLE \"Compilation\" ( "
+              "\"id\"	INTEGER, \"artist_id\"	INTEGER )" ) ) == nullptr )
+       {
+           qDebug() << "Failed to create Compilation Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
 
-      }
-      else
-      {
-        qDebug() << "Error creating Artists Table!";
-      }
-      query.prepare( "CREATE TABLE IF NOT EXISTS \"Genres\" (\"id\"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, \"name\"	TEXT NOT NULL UNIQUE )" );
-      if ( query.exec() )
-      {
+       if ( ( results = query( "CREATE TABLE \"Composer\" ( "
+              "\"id\"	INTEGER NOT NULL UNIQUE, \"name\" "
+              "TEXT NOT NULL UNIQUE )" ) ) == nullptr )
+       {
+           qDebug() << "Failed to create Composer Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
 
-      }
-      else
-      {
-        qDebug() << "Error creating Genres Table!";
-      }
+       if ( ( results = query( "CREATE TABLE \"Equalizer\" ( "
+              "\"id\"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "
+              "\"name\"	TEXT NOT NULL, \"data\"	BLOB )" ) ) == nullptr )
+       {
+           qDebug() << "Failed to create Equalizer Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
+
+       if ( ( results = query( "CREATE TABLE \"Genre\" (\"id\"	"
+              "INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, \"name\"	"
+              "TEXT NOT NULL UNIQUE )"  ) ) == nullptr )
+       {
+           qDebug() << "Failed to create Genre Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
+
+       if ( ( results = query( "CREATE TABLE \"Grouping\" ( "
+              "\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "
+              "\"name\"	TEXT NOT NULL UNIQUE )" ) ) == nullptr )
+       {
+           qDebug() << "Failed to create Grouping Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
+
+       if ( ( results = query(
+                  "CREATE TABLE \"Track\" ( "
+                      "\"id\"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, "
+                      "\"name\"	TEXT NOT NULL, "
+                      "\"album_id\"	INTEGER, "
+                      "\"compilation_id\"	INTEGER, "
+                      "\"genre_id\"	INTEGER, "
+                      "\"path\"	TEXT NOT NULL, "
+                      "\"time\"	TEXT NOT NULL, "
+                      "\"playcount\"	INTEGER NOT NULL DEFAULT 0, "
+                      "\"rating\"	INTEGER NOT NULL DEFAULT 0 CHECK(rating<=5), "
+                      "\"composer_id\"	INTEGER, "
+                      "\"year\"	INTEGER, "
+                      "\"track\"	INTEGER, "
+                      "\"disc\"	INTEGER DEFAULT 1, "
+                      "\"compilation\"	INTEGER DEFAULT 0 CHECK(compilation>=0 AND compilation<=1), "
+                      "\"lyrics\"	TEXT, "
+                      "\"start\"	TEXT DEFAULT '0:00', "
+                      "\"stop\"	TEXT, "
+                      "\"position\"	TEXT DEFAULT '0:00', "
+                      "\"skip\"	INTEGER DEFAULT 0, "
+                      "\"equalizer_id\"	INTEGER DEFAULT 0, "
+                      "\"sort_name\"	TEXT, "
+                      "\"sort_album\"	INTEGER, "
+                      "\"sort_artist\"	INTEGER, "
+                      "\"sort_album_artist\"	INTEGER, "
+                      "\"sort_composer\"	INTEGER, "
+                      "\"kind\"	INTEGER, "
+                      "\"size\"	INTEGER, "
+                      "\"bitrate\"	INTEGER, "
+                      "\"profile\"	INTEGER, "
+                      "\"channels\"	INTEGER, "
+                      "\"volume\"	INTEGER, "
+                      "\"purchased_by\"	TEXT, "
+                      "\"purchased_date\"	INTEGER, "
+                      "\"date_modified\"	INTEGER, "
+                      "\"date_added\"	INTEGER, "
+                      "\"copyright\"	TEXT, "
+                      "FOREIGN KEY(\"album_id\") REFERENCES \"Artist\"(\"id\") ON DELETE SET NULL, "
+                      "FOREIGN KEY(\"compilation_id\") REFERENCES \"Album\"(\"id\") ON DELETE SET NULL, "
+                      "FOREIGN KEY(\"genre_id\") REFERENCES \"Genre\"(\"id\") ON DELETE SET NULL, "
+                      "FOREIGN KEY(\"composer_id\") REFERENCES \"Composer\"(\"id\") ON DELETE SET NULL )"
+                  ) ) == nullptr )
+       {
+           qDebug() << "Failed to create Track Table";
+       }
+       else {
+           delete results;
+           results = nullptr;
+       }
+
+
    }
 }
 
-int DbManager::addTrack( QString name, QString time, QString trackPath, int artistID, int albumID, int genreID )
+int DbManager::addTrack( QString name, QString time, QString trackPath,
+                         int artistID, int albumID, int genreID )
 {
-    if ( ifExists( PATH, trackPath) )
+    if ( ifExists( TAG_PATH, trackPath) )
         return 0;
 
     QSqlQuery query;
@@ -84,7 +183,7 @@ int DbManager::addTrack( QString name, QString time, QString trackPath, int arti
 
 int DbManager::addArtist(QString artistName)
 {
-    if ( ifExists( ARTIST, artistName ) )
+    if ( ifExists( TAG_ARTIST, artistName ) )
             return 0;
 
     QSqlQuery query;
@@ -99,7 +198,7 @@ int DbManager::addArtist(QString artistName)
 
 int DbManager::addGenre(QString genreName)
 {
-    if ( ifExists( GENRE, genreName ) )
+    if ( ifExists( TAG_GENRE, genreName ) )
             return 0;
 
     QSqlQuery query;
@@ -114,7 +213,7 @@ int DbManager::addGenre(QString genreName)
 
 int DbManager::addAlbum(QString albumName, int artist_id)
 {
-    if ( ifExists( ALBUM, albumName ) )
+    if ( ifExists( TAG_ALBUM, albumName ) )
             return 0;
 
     QSqlQuery query;
@@ -128,7 +227,7 @@ int DbManager::addAlbum(QString albumName, int artist_id)
     return 1;
 }
 
-int DbManager::getID(TAG type, QString value)
+int DbManager::getID(TAG_TYPE type, QString value)
 {
     if ( !ifExists( type, value ) )
             return -1;
@@ -136,22 +235,24 @@ int DbManager::getID(TAG type, QString value)
     QSqlQuery query;
     switch ( type )
     {
-        case PATH :
+        case TAG_PATH :
             query.prepare( "SELECT id FROM Track WHERE path = (?)" );
             query.addBindValue(value);
             break;
-        case ARTIST:
+        case TAG_ARTIST:
             query.prepare( "SELECT id FROM Artists WHERE name = (?)" );
             query.addBindValue(value);
             break;
-        case ALBUM :
+        case TAG_ALBUM :
             query.prepare( "SELECT id FROM Albums WHERE name = (?)" );
             query.addBindValue(value);
             break;
-        case GENRE :
+        case TAG_GENRE :
             query.prepare( "SELECT id FROM Genres WHERE name = (?)" );
             query.addBindValue(value);
             break;
+        default :
+            return 0;
     }
 
     if ( !query.exec() )
@@ -180,7 +281,30 @@ QList<QStringList> * DbManager::getTracks()
     QList<QStringList> *tracks = new QList<QStringList>;
     QStringList *currentRecord;
     QSqlQuery query;
-    query.prepare( "SELECT Track.name, time, Artists.name, Albums.name, Genres.name, playcount, rating, path FROM Track INNER JOIN Albums ON Albums.id = Track.album_id INNER JOIN Artists ON Artists.id = Track.artist_id INNER JOIN Genres ON Genres.id = Track.genre_id" );
+    query.prepare(  "SELECT "
+                        "Track.name, "
+                        "time, "
+                        "Artists.name,"
+                        "Albums.name, "
+                        "Genres.name, "
+                        "playcount, "
+                        "rating, "
+                        "path "
+                    "FROM "
+                        "Track "
+                    "INNER JOIN "
+                        "Albums "
+                    "ON "
+                        "Albums.id = Track.album_id "
+                    "INNER JOIN "
+                        "Artists "
+                    "ON "
+                        "Artists.id = Track.artist_id "
+                    "INNER JOIN "
+                        "Genres "
+                    "ON "
+                        "Genres.id = Track.genre_id "
+                    );
 
     if ( !query.exec() )
          return new QList<QStringList>;
@@ -198,84 +322,29 @@ QList<QStringList> * DbManager::getTracks()
     return tracks;
 }
 
-QStringList DbManager::getGenres()
-{
-    QSqlQuery query;
-    static QStringList genres;
-    query.prepare( "SELECT name FROM Genres" );
-
-    if ( query.exec() )
-    {
-        while ( query.next() )
-        {
-            genres.append( query.value(0).toString() );
-        }
-
-        return genres;
-    }
-
-    return QStringList();
-}
-
-QStringList DbManager::getArtists()
-{
-    QSqlQuery query;
-    static QStringList artists;
-    query.prepare( "SELECT name FROM Artists" );
-
-    if ( query.exec() )
-    {
-        while ( query.next() )
-        {
-            artists.append( query.value(0).toString() );
-        }
-
-        return artists;
-    }
-
-    return QStringList();
-}
-
-QStringList DbManager::getAlbums()
-{
-    QSqlQuery query;
-    static QStringList albums;
-    query.prepare( "SELECT name FROM Albums" );
-
-    if ( query.exec() )
-    {
-        while ( query.next() )
-        {
-            albums.append( query.value(0).toString() );
-        }
-
-        return albums;
-    }
-
-    return QStringList();
-}
-
-bool DbManager::ifExists( TAG type, QString value )
+bool DbManager::ifExists( TAG_TYPE type, QString value )
 {
     QSqlQuery query;
     switch ( type )
     {
-        case PATH :
+        case TAG_PATH :
             query.prepare( "SELECT id FROM Track WHERE path = (?)" );
             query.addBindValue(value);
             break;
-        case ARTIST:
+        case TAG_ARTIST:
             query.prepare( "SELECT id FROM Artists WHERE name = (?)" );
             query.addBindValue(value);
             break;
-        case ALBUM :
+        case TAG_ALBUM :
             query.prepare( "SELECT id FROM Albums WHERE name = (?)" );
             query.addBindValue(value);
             break;
-        case GENRE :
+        case TAG_GENRE :
             query.prepare( "SELECT id FROM Genres WHERE name = (?)" );
             query.addBindValue(value);
             break;
+        default :
+            return 0;
     }
 
     if ( !query.exec() )
@@ -306,7 +375,10 @@ QString DbManager::getTrackPath(QString filename)
     query.prepare( "SELECT path FROM Track WHERE name = (?)" );
     query.addBindValue(filename);
     if ( !query.exec() )
-        return NULL;
+    {
+        qDebug() << query.lastError();
+        return QString();
+    }
 
     if ( query.first() )
     {
@@ -314,5 +386,171 @@ QString DbManager::getTrackPath(QString filename)
         return path;
     }
 
-    return NULL;
+    return QString();
+}
+
+QList<QStringList> * DbManager::query( QString sql )
+{
+    QSqlQuery query;
+    QStringList *record = nullptr;
+    QList<QStringList> *results = nullptr;
+
+    query.prepare( sql );
+
+    if ( !query.exec() )
+    {
+        qDebug() << query.lastError();
+        return nullptr;
+    }
+
+    results = new QList<QStringList>();
+
+    while ( query.next() )
+    {
+        record = new QStringList();
+
+        for ( int i = 0; i < query.record().count();i++)
+            record->append( query.value(i).toString() );
+
+        results->append( QStringList( *record ) );
+
+        for ( int i = 0; i < record->size(); i++ )
+            qDebug() << record[i];
+
+        delete record;
+    }
+    return results;
+
+}
+
+QList<QStringList> *DbManager::pullLibrary()
+{
+    QSqlQuery query;
+    QStringList *record = nullptr;
+    QList<QStringList> *results = nullptr;
+
+    query.prepare( "SELECT "
+                   "Track.id, "
+                   "Track.disc AS \"Disc\", "
+                   "Album.discs AS \"Disc Total\", "
+                   "Track.track AS \"Track #\", "
+                   "Album.tracks AS \"Total Tracks\", "
+                   "Track.name, "
+                   "Track.time AS \"Time\", "
+                   "Album.name AS \"Album\", "
+                   "Artist.name AS \"Album Artist\", "
+                   "Comp.Artist, "
+                   "Genre.name AS \"Genre\", "
+                   "Track.playcount AS \"Playcount\", "
+                   "Track.rating AS \"Rating\", "
+                   "Composer.name AS \"Composer\", "
+                   "Track.year AS \"Year\", "
+                   "Track.compilation AS \"Compilation\", "
+                   "Track.lyrics AS \"Lyrics\", "
+                   "Track.start AS \"Start\", "
+                   "Track.position AS \"Position\", "
+                   "Track.stop AS \"Stop\", "
+                   "Track.skip AS \"Skip\", "
+                   "Track.sort_name AS \"Sort Name\", "
+                   "SortAlbum.name AS \"Sort Album\", "
+                   "SortArtist.name AS \"Sort Artist\", "
+                   "SortAlbumArtist.name AS \"Sort Album Artist\", "
+                   "Track.kind AS \"Kind\", "
+                   "Track.size AS \"Size\", "
+                   "Track.bitrate AS \"Bitrate\", "
+                   "Track.profile AS \"Profile\", "
+                   "Track.channels AS \"Channels\", "
+                   "Track.volume AS \"Volume\", "
+                   "Track.purchased_by AS \"Purchased By\", "
+                   "Track.purchased_date AS \"Purchased Date\", "
+                   "Track.date_modified AS \"Date Modified\", "
+                   "Track.date_added AS \"Date Added\", "
+                   "Track.copyright AS \"Copyright\" "
+               "FROM "
+                   "Track "
+               "LEFT JOIN "
+                   "Album "
+               "ON "
+                   "Album.id = Track.album_id "
+               "LEFT JOIN "
+                   "Artist "
+               "ON "
+                   "Album.artist_id = Artist.id "
+               "LEFT JOIN "
+                   "(SELECT "
+                       "Compilation.id AS \"comp_id\", "
+                       "group_concat( Artist.name, \" & \" ) AS \"Artist\" "
+                   "FROM "
+                       "Compilation "
+                   "LEFT JOIN "
+                       "Artist "
+                   "ON "
+                       "Compilation.artist_id = Artist.id) as \"Comp\" "
+               "ON "
+                       "Comp.comp_id = Track.compilation_id "
+               "LEFT JOIN "
+                   "Genre "
+               "ON "
+                   "Genre.id = Track.genre_id "
+               "LEFT JOIN "
+                   "Composer "
+               "ON "
+                   "Composer.id = Track.composer_id "
+               "LEFT JOIN "
+                   "(SELECT "
+                       "Album.id AS \"id\", "
+                       "Album.name AS \"name\" "
+                   "FROM "
+                       "Album "
+                   "LEFT JOIN "
+                       "Track "
+                   "ON "
+                       "Track.sort_album = album_id "
+                   ") AS \"SortAlbum\" "
+               "ON "
+                   "SortAlbum.id = Track.sort_album "
+               "LEFT JOIN "
+                   "(SELECT "
+                       "Compilation.id AS \"id\", "
+                       "group_concat( Artist.name, \" & \" ) AS \"name\" "
+                   "FROM "
+                       "Compilation "
+                   "LEFT JOIN "
+                       "Artist "
+                   "ON "
+                       "Compilation.artist_id = Artist.id) as \"SortArtist\" "
+               "ON "
+                       "SortArtist.id = Track.sort_artist "
+               "LEFT JOIN "
+                   "Artist AS \"SortAlbumArtist\" "
+               "ON "
+                   "SortAlbumArtist.id = Track.sort_album_artist "
+               "LEFT JOIN "
+                   "Composer AS \"SortComposer\" "
+               "ON "
+                   "SortComposer.id = Track.sort_composer"
+                );
+    if ( !query.exec() )
+    {
+        qDebug() << query.lastError();
+        return nullptr;
+    }
+
+    results = new QList<QStringList>();
+
+    while ( query.next() )
+    {
+        record = new QStringList();
+
+        for ( int i = 0; i < query.record().count();i++)
+            record->append( query.value(i).toString() );
+
+        results->append( QStringList( *record ) );
+
+        for ( int i = 0; i < record->size(); i++ )
+            qDebug() << record[i];
+
+        delete record;
+    }
+    return results;
 }

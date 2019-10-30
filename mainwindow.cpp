@@ -1,102 +1,80 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <QDir>
-#include <QDirIterator>
 #include <QDebug>
+
+// Media Playback
 #include <QMediaPlayer>
 #include <QMediaMetaData>
+#include <QMediaResource>
+
+// For displaying artwork
 #include <QPixmap>
 #include <QGraphicsPixmapItem>
-#include <QDirIterator>
+
 #include <QStack>
-#include <id3/tag.h>
-#include <QtSql/QSql>
-#include <QMediaResource>
-#include "dbmanager.h"
-#include <QFileDialog>
+#include <QColumnView>
 #include <QStandardItemModel>
 #include <QStandardItem>
-#include <QColumnView>
-#include "editmetadata.h"
-#include "metadata.h"
 
+// Folder and File Selections
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <QDir>
+#include <QDirIterator>
+
+// Handling the library database
+#include <QtSql/QSql>
+
+// Reading metadata from files for database
 #include <taglib/tag.h>
 #include <taglib/fileref.h>
+
+#include "dbmanager.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-    int step = 0;
-
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
     ui->setupUi(this);
 
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
-    libraryPath = "/home/aesycos/Music/";
+
+    // Read Config File
+    readConfig();
+
+    ui->watchFoldersListView->setModel( watchedFolders );
 
     // Setup TableView
-    defaultColumns << "Track" << "Time" << "Artist" << "Album" << "Genre" << "Play Count" << "Rating" << "Path" << "";
-    ui->libraryTable->setColumnCount(9);
-    ui->libraryTable->setHorizontalHeaderLabels( defaultColumns );
+    ui->libraryTable->setColumnCount( defaultColumns->size() );
+    ui->libraryTable->setHorizontalHeaderLabels( *defaultColumns );
 
     // Get Music Library Info
     initDB();
 
-    libraryDir = new QDir( libraryPath );
     player = new QMediaPlayer;
 
-    importFolder( libraryDir );
+    //for ( int i = 0; i < ui->libraryTable->horizontalHeader()->count(); i++ )
+    //{
+    //    qDebug() << i << ": " << ui->libraryTable->horizontalHeaderItem( i )->text();
+    //}
 
-    QStringList qsl_genrelist = library_db->getGenres();
-    QStandardItemModel *genreModel = new QStandardItemModel;
-    for ( int i = 0; i < qsl_genrelist.size(); i++ )
-    {
-        genreModel->appendRow( new QStandardItem( qsl_genrelist.at(i)));
-    }
-    ui->genreList->setModel(genreModel);
-
-    QStringList qsl_artistlist = library_db->getArtists();
-    QStandardItemModel *artistModel = new QStandardItemModel;
-    for ( int i = 0; i < qsl_artistlist.size(); i++ )
-    {
-        artistModel->appendRow( new QStandardItem( qsl_artistlist.at(i)));
-    }
-    ui->artistList->setModel(artistModel);
-
-    QStringList qsl_albumlist = library_db->getAlbums();
-    QStandardItemModel *albumModel = new QStandardItemModel;
-    for ( int i = 0; i < qsl_albumlist.size(); i++ )
-    {
-        albumModel->appendRow( new QStandardItem( qsl_albumlist.at(i)));
-    }
-    ui->albumList->setModel(albumModel);
-
-    QList<QStringList> *tracks;
-    tracks = library_db->getTracks();
-
-    for ( int row = 0; row < tracks->size(); row++ )
-    {
-        ui->libraryTable->insertRow( ui->libraryTable->rowCount() );
-
-        for ( int col = 0; col < 8; col++)
-            ui->libraryTable->setItem( ui->libraryTable->rowCount()-1, col, new QTableWidgetItem( QString( tracks->at(row).at(col) ) ) );
-
-    }
-
-    ui->libraryTable->hideColumn(7);
+    updateLibrary();
     ui->libraryTable->resizeColumnsToContents();
     ui->libraryTable->resizeRowsToContents();
+    ui->progressBar->setMinimum(0);
+
     // Setup UI control slot/signals
+    {
     connect( ui->volumeSlider, SIGNAL( valueChanged(int)), player, SLOT(setVolume(int)) );
     connect( player, SIGNAL( volumeChanged(int)), ui->volumeSlider, SLOT(setValue(int)) );
-
     connect( player, SIGNAL( durationChanged( qint64 ) ), this, SLOT( durationChanged( qint64 ) ) );
     connect( player, SIGNAL( positionChanged( qint64 ) ), this, SLOT( positionChanged( qint64 ) ) );
     connect( player, SIGNAL( stateChanged( QMediaPlayer::State ) ), this, SLOT( playButtonState( QMediaPlayer::State ) ) );
     connect( player, SIGNAL( metaDataAvailableChanged(bool) ), this, SLOT( updateTrackInfo(bool) ) );
-    player->setVolume(20);
-    ui->progressBar->setMinimum(0);
+    }
 
+    player->setVolume( volume );
+    ui->contentPanel->setCurrentWidget( ui->libraryPage );
 }
 
 MainWindow::~MainWindow()
@@ -161,11 +139,11 @@ void MainWindow::updateTrackInfo(bool available)
     ui->artistLabel->setText(artist);
     if ( !cover.isNull() )
     {
-        QGraphicsScene *scene = new QGraphicsScene;
-        ui->albumArt->setScene(scene);
-        //ui->albumArt->scene()->setSceneRect(QRectF( double((ui->albumArt->maximumWidth())), double(0), double(ui->albumArt->maximumWidth()), double(ui->albumArt->maximumHeight())));
-        ui->albumArt->scene()->addPixmap(QPixmap::fromImage( cover ) );
-        ui->albumArt->fitInView(ui->albumArt->scene()->itemsBoundingRect(), Qt::AspectRatioMode::IgnoreAspectRatio );
+
+        ui->albumArtThumb->setPixmap( QPixmap::fromImage( cover ) );
+    }
+    else {
+        ui->albumArtThumb->setPixmap( QPixmap( ":/icons/icons/stolencover.png" ) );
     }
 }
 
@@ -187,7 +165,7 @@ void MainWindow::on_settingsButton_clicked()
 
 void MainWindow::initDB()
 {
-    library_db = new DbManager( QString( "/home/aesycos/Music/library.db" ) );
+
 }
 
 void MainWindow::importFolder(QDir *parentFolder)
@@ -214,15 +192,10 @@ void MainWindow::importFolder(QDir *parentFolder)
     int count = 0;
     while ( !fileList->isEmpty() )
     {
-        //if ( currentMeta )
-        //    delete( currentMeta );
-
         currentFile = fileList->pop();
 
         if ( library_db->ifExists( PATH, currentFile ) )
             continue;
-
-        //currentMeta = new MetaData( currentFile );
 
         TagLib::FileRef f( currentFile.toUtf8() );
         title = f.tag()->title().toCString();
@@ -248,8 +221,151 @@ void MainWindow::importFolder(QDir *parentFolder)
 
         library_db->addTrack( title, time, currentFile, artistID, albumID, genreID );
         count++;
+    }
+}
 
-        // TODO: Add MetaData to DB
+void MainWindow::addToWatchedFolders(QString folder)
+{
+    if ( watchedFolders->findItems( folder, Qt::MatchExactly ).size() == 0 )
+        watchedFolders->appendRow( new QStandardItem( folder ) );
+
+    emit watchedFoldersChanged( folder );
+}
+
+void MainWindow::addToWatchedFolders(QList<QUrl> folderList)
+{
+    while ( folderList.size() > 0 )
+        addToWatchedFolders( folderList.takeAt(0).toLocalFile() );
+}
+
+bool MainWindow::isConfigLoaded()
+{
+    if ( settings == nullptr )
+        return false;
+    else {
+        return true;
+    }
+}
+
+void MainWindow::updateLibrary()
+{
+    QStringList qsl_genrelist = library_db->getGenres();
+    QStandardItemModel *genreModel = new QStandardItemModel;
+    for ( int i = 0; i < qsl_genrelist.size(); i++ )
+    {
+        genreModel->appendRow( new QStandardItem( qsl_genrelist.at(i)));
+    }
+    ui->genreList->setModel(genreModel);
+
+    QStringList qsl_artistlist = library_db->getArtists();
+    QStandardItemModel *artistModel = new QStandardItemModel;
+    for ( int i = 0; i < qsl_artistlist.size(); i++ )
+    {
+        artistModel->appendRow( new QStandardItem( qsl_artistlist.at(i)));
+    }
+    ui->artistList->setModel(artistModel);
+
+    QStringList qsl_albumlist = library_db->getAlbums();
+    QStandardItemModel *albumModel = new QStandardItemModel;
+    for ( int i = 0; i < qsl_albumlist.size(); i++ )
+    {
+        albumModel->appendRow( new QStandardItem( qsl_albumlist.at(i)));
+    }
+    ui->albumList->setModel(albumModel);
+
+    QList<QStringList> *tracks;
+    tracks = library_db->getTracks();
+
+    for ( int row = 0; row < tracks->size(); row++ )
+    {
+        ui->libraryTable->insertRow( ui->libraryTable->rowCount() );
+
+        for ( int col = 0; col < 8; col++)
+            ui->libraryTable->setItem( ui->libraryTable->rowCount()-1, col, new QTableWidgetItem( QString( tracks->at(row).at(col) ) ) );
 
     }
+}
+
+bool MainWindow::readConfig()
+{
+    settings = new Settings( new QFile() );
+
+    // TODO Handle internal vs external config loading;
+    // Internal config should always exist as fallback if external config is
+    // available should point to and load it
+    /*if ( settings->isInternal() )
+        settings->isError();
+    else {
+        settings->loadExternal();
+        settings->isError();
+    }*/
+
+    if ( settings->isLoaded() )
+    {
+        // set Library Path
+        if ( settings->getLibraryPath()->isEmpty() )
+        {
+
+            libraryPath = new QString( QStandardPaths::displayName(QStandardPaths::MusicLocation) );
+        }
+        else {
+
+            libraryPath = new QString( *settings->getLibraryPath() );
+        }
+
+
+        // set db
+        if ( settings->getDbName()->isEmpty() )
+            library_db = new DbManager(QStandardPaths::displayName(QStandardPaths::MusicLocation)+"/library.db");
+        else {
+            library_db = new DbManager( libraryPath + QChar('/') + *settings->getDbName() );
+        }
+
+
+        // set default Columns
+        if ( settings->getDefaultColumns()->isEmpty() )
+        {
+            defaultColumns = new QStringList();
+            defaultColumns->append("Track");
+            defaultColumns->append("Time");
+            defaultColumns->append("Artist");
+            defaultColumns->append("Album");
+            defaultColumns->append("Genre");
+
+        }
+        else {
+            defaultColumns = new QStringList( *settings->getDefaultColumns() );
+        }
+
+        // set volume
+        volume = settings->getVolume();
+        if ( settings->getWatchedFolders()->isEmpty() )
+        {
+            watchedFolders = new QStandardItemModel;
+        }
+        else {
+            watchedFolders = new QStandardItemModel;
+            QStringList folders = *settings->getWatchedFolders();
+
+            while ( folders.size() > 0 )
+            {
+                addToWatchedFolders( folders.takeFirst() );
+            }
+        }
+    }
+
+    return true;
+}
+
+void MainWindow::on_addFolderButton_clicked()
+{
+        QList<QUrl> urls;
+        urls << QUrl::fromLocalFile(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first())
+             << QUrl::fromLocalFile(QStandardPaths::standardLocations(QStandardPaths::MusicLocation).first());
+
+        QFileDialog dialog;
+        dialog.setSidebarUrls(urls);
+        dialog.setFileMode(QFileDialog::DirectoryOnly);
+        if ( dialog.exec() )
+            addToWatchedFolders( dialog.selectedUrls() );
 }

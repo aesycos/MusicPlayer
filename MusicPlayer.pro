@@ -28,20 +28,15 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     dbmanager.cpp \
-    addfolderdialog.cpp \
-    metadata.cpp \
-    editmetadata.cpp
+    settings.cpp
 
 HEADERS += \
         mainwindow.h \
     dbmanager.h \
-    addfolderdialog.h \
-    metadata.h \
-    editmetadata.h
+    settings.h
 
 FORMS += \
         mainwindow.ui \
-    addfolderdialog.ui \
     editmetadata.ui
 
 LIBS += -L/usr/include/taglib/ -ltag
